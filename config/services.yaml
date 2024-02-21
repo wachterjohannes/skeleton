@@ -17,6 +17,7 @@ services:
         #    'bool $isDebug': '%kernel.debug%'
         bind:
             $documentManagerEventDispatcher: '@sulu_document_manager.event_dispatcher.standard'
+            $projectDirectory: '%kernel.project_dir%'
 
 
     # makes classes in src/ available to be used as services
