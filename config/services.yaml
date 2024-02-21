@@ -15,6 +15,12 @@ services:
         # https://symfony.com/doc/current/service_container.html#binding-arguments-by-name-or-type
         #bind:
         #    'bool $isDebug': '%kernel.debug%'
+        bind:
+            $documentManagerEventDispatcher: '@sulu_document_manager.event_dispatcher.standard'
+            $projectDirectory: '%kernel.project_dir%'
+            $mapping: '%sulu_document_manager.mapping%'
+            $session: '@sulu_document_manager.default_session'
+            $liveSession: '@sulu_document_manager.live_session'
 
 
     # makes classes in src/ available to be used as services
@@ -28,3 +34,15 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+
+    Sulu\Component\DocumentManager\NamespaceRegistry:
+        alias: sulu_document_manager.namespace_registry
+
+    Sulu\Component\DocumentManager\DocumentManagerInterface:
+        alias: sulu_document_manager.document_manager
+
+    Sulu\Component\Content\Metadata\Factory\StructureMetadataFactoryInterface:
+        alias: sulu_page.structure.factory
+
+    Sulu\Bundle\HttpCacheBundle\EventSubscriber\InvalidationSubscriber:
+        alias: sulu_http_cache.event_subscriber.invalidation
