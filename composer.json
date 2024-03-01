@@ -48,6 +48,7 @@
         "symfony/mailer": "^6.3",
         "symfony/monolog-bridge": "^6.3",
         "symfony/monolog-bundle": "^3.4",
+        "symfony/rate-limiter": "6.3.*",
         "symfony/runtime": "^6.3",
         "symfony/security-bundle": "^6.3",
         "symfony/twig-bundle": "^6.3"
