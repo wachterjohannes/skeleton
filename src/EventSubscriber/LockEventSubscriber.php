@@ -6,6 +6,7 @@ namespace App\EventSubscriber;
 
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
+use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\LockInterface;
@@ -14,8 +15,6 @@ use Symfony\Component\Lock\Store\FlockStore;
 class LockEventSubscriber implements EventSubscriberInterface
 {
     public const ENABLED = true;
-
-    private ?LockInterface $lock = null;
 
     public function __construct(
         private string $projectDirectory,
@@ -33,20 +32,31 @@ class LockEventSubscriber implements EventSubscriberInterface
         yield KernelEvents::RESPONSE => 'onKernelResponse';
     }
 
-    public function onKernelRequest(RequestEvent $e): void
+    public function onKernelRequest(RequestEvent $event): void
     {
-        $route = $e->getRequest()->attributes->get('_route');
+        if (!$event->isMainRequest()) {
+            return;
+        }
+
+        $route = $event->getRequest()->attributes->get('_route');
         if ('sulu_media.website.image.proxy' !== $route) {
             return;
         }
 
-        $this->lock = $this->createLock($route, \rand(0, $this->max));
-        $this->lock->acquire(true);
+        $lock = $this->createLock($route, \rand(0, $this->max));
+        $lock->acquire(true);
+
+        $event->getRequest()->attributes->set('image_proxy_lock', $lock);
     }
 
-    public function onKernelResponse(): void
+    public function onKernelResponse(ResponseEvent $event): void
     {
-        $this->lock?->release();
+        $lock = $event->getRequest()->attributes->get('image_proxy_lock');
+        if (!$lock instanceof LockInterface) {
+            return;
+        }
+
+        $lock->release();
     }
 
     protected function createLock(string $route, int $index): LockInterface
@@ -54,6 +64,11 @@ class LockEventSubscriber implements EventSubscriberInterface
         $store = new FlockStore($this->projectDirectory . '/var/lock');
         $factory = new LockFactory($store);
 
-        return $factory->createLock($route . $index, 30);
+        $maxExecutionTime = \ini_get('max_execution_time');
+        if ($maxExecutionTime <= 0) {
+            $maxExecutionTime = 60;
+        }
+
+        return $factory->createLock($route . $index, (int) ($maxExecutionTime * 0.75));
     }
 }
